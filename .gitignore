@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+
+# Uploads directory
+uploads/
+
+# Temporary files
+tmp/
