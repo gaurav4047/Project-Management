@@ -39,6 +39,85 @@ const PROJECT_VISIBILITY = {
   PRIVATE: 'private'
 };
 
+// ===================== Authentication Routes =====================
+app.post('/auth/register', async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+        
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ detail: 'User already exists' });
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create new user
+        const user = new User({
+            name,
+            email,
+            passwordHash: hashedPassword,
+            role: role || 'student'
+        });
+
+        await user.save();
+
+        // Generate JWT
+        const token = signToken(user);
+        
+        res.status(201).json({
+            access_token: token,
+            token_type: 'bearer',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ detail: 'Error during registration' });
+    }
+});
+
+app.post('/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        // Find user by email (username in this case)
+        const user = await User.findOne({ email: username });
+        if (!user) {
+            return res.status(400).json({ detail: 'Invalid credentials' });
+        }
+
+        // Verify password
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+            return res.status(400).json({ detail: 'Invalid credentials' });
+        }
+
+        // Generate JWT
+        const token = signToken(user);
+        
+        res.json({
+            access_token: token,
+            token_type: 'bearer',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ detail: 'Error during login' });
+    }
+});
+
 // ===================== Basic Middleware =====================
 const origins = (process.env.CORS_ORIGINS || 'http://127.0.0.1:5500,http://localhost:5500')
   .split(',').map(s => s.trim()).filter(Boolean);
